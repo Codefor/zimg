@@ -30,5 +30,44 @@ void echo_cb(evhtp_request_t *req, void *arg);
 void post_request_cb(evhtp_request_t *req, void *arg);
 void send_document_cb(evhtp_request_t *req, void *arg);
 
+static const char * method_strmap[] = {
+    "GET",
+    "HEAD",
+    "POST",
+    "PUT",
+    "DELETE",
+    "MKCOL",
+    "COPY",
+    "MOVE",
+    "OPTIONS",
+    "PROPFIND",
+    "PROPATCH",
+    "LOCK",
+    "UNLOCK",
+    "TRACE",
+    "CONNECT",
+    "PATCH",
+    "UNKNOWN",
+};
+
+static const struct table_entry {
+	const char *extension;
+	const char *content_type;
+} content_type_table[] = {
+	{ "txt", "text/plain" },
+	{ "c", "text/plain" },
+	{ "h", "text/plain" },
+	{ "html", "text/html" },
+	{ "htm", "text/htm" },
+	{ "css", "text/css" },
+	{ "gif", "image/gif" },
+	{ "jpg", "image/jpeg" },
+	{ "jpeg", "image/jpeg" },
+	{ "png", "image/png" },
+	{ "pdf", "application/pdf" },
+	{ "ps", "application/postsript" },
+	{ NULL, NULL },
+};
+
 
 #endif

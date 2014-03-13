@@ -119,14 +119,14 @@ int kmp(const char *matcher, int mlen, const char *pattern, int plen)
 }
 
 /**
- * @brief get_type It tell you the type of a file.
+ * @brief get_ext It tell you the type of a file.
  *
  * @param filename The name of the file.
  * @param type Save the type string.
  *
  * @return 1 for success and -1 for fail.
  */
-int get_type(const char *filename, char *type)
+int get_ext(const char *filename, char *type)
 {
     char *flag, *tmp;
     if((flag = strchr(filename, '.')) == 0)
@@ -154,6 +154,11 @@ int is_img(const char *filename)
 {
     char *imgType[] = {"jpg", "jpeg", "png", "gif"};
     char *lower= (char *)malloc(strlen(filename) + 1);
+    //failed to malloc
+    if(lower == NULL){
+	return 0;
+    }
+
     char *tmp;
     int i;
     int isimg = 0;
@@ -171,7 +176,10 @@ int is_img(const char *filename)
             break;
         }
     }
-    free(lower);
+
+    if(lower){
+	free(lower);
+    }
     return isimg;
 }
 

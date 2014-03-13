@@ -29,7 +29,7 @@
 #include "zlog.h"
 #include "zcache.h"
 
-extern struct setting settings;
+struct setting settings;
 evbase_t *evbase;
 
 static void settings_init(void); 
@@ -250,6 +250,7 @@ int main(int argc, char **argv)
     evhtp_set_cb(htp, "/dump", dump_request_cb, NULL);
     evhtp_set_cb(htp, "/upload", post_request_cb, NULL);
     //evhtp_set_gencb(htp, echo_cb, NULL);
+    //if no other callbacks are matched
     evhtp_set_gencb(htp, send_document_cb, NULL);
 #ifndef EVHTP_DISABLE_EVTHR
     evhtp_use_threads(htp, NULL, settings.num_threads, NULL);
@@ -264,7 +265,7 @@ int main(int argc, char **argv)
     event_base_free(evbase);
     MagickWandTerminus();
 
-    fprintf(stdout, "\nByebye!\n");
+    LOG_PRINT(LOG_INFO, "\nByebye!\n");
     return 0;
 }
 
