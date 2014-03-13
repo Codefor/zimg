@@ -230,6 +230,7 @@ int get_img(zimg_req_t *req, char **buff_ptr, size_t *img_size)
     }
     LOG_PRINT(LOG_INFO, "Start to Find the Image...");
 
+    // /1023/1023/xxxxxxxxxxxxxxx.png
     len = strlen(req->md5) + strlen(settings.img_path) + 12;
     if (!(whole_path = malloc(len)))
     {

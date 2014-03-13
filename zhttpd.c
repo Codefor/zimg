@@ -31,7 +31,7 @@
 #include "zlog.h"
 
 static char *server_name = "zimg/1.0.0 (Unix)";
-extern struct setting settings;
+struct setting settings;
 
 static const char * guess_type(const char *type);
 static const char * guess_content_type(const char *path);
@@ -41,6 +41,7 @@ void echo_cb(evhtp_request_t *req, void *arg);
 void post_request_cb(evhtp_request_t *req, void *arg);
 void send_document_cb(evhtp_request_t *req, void *arg);
 static int get_req_method(evhtp_request_t *req);
+static void send_reply(evhtp_request_t *req, char *type);
 
 static int get_req_method(evhtp_request_t *req)
 {
@@ -53,6 +54,16 @@ static int get_req_method(evhtp_request_t *req)
     LOG_PRINT(LOG_INFO, "Method: %s", method_strmap[req_method]);
 
     return req_method;
+}
+
+static void send_reply(evhtp_request_t *req, char *type){
+    if(req == NULL || type == NULL){
+	return;
+    }
+
+    evhtp_headers_add_header(req->headers_out, evhtp_header_new("Server", server_name, 0, 0));
+    evhtp_headers_add_header(req->headers_out, evhtp_header_new("Content-Type", guess_type(type), 0, 0));
+    evhtp_send_reply(req, EVHTP_RES_OK);
 }
 /**
  * @brief guess_type It returns a HTTP type by guessing the file type.
@@ -148,10 +159,7 @@ void dump_request_cb(evhtp_request_t *req, void *arg)
     }
     puts(">>>");
 
-    //evhtp_headers_add_header(req->headers_out, evhtp_header_new("Server", "zimg/1.0.0 (Unix) (OpenSUSE/Linux)", 0, 0));
-    evhtp_headers_add_header(req->headers_out, evhtp_header_new("Server", server_name, 0, 0));
-    evhtp_headers_add_header(req->headers_out, evhtp_header_new("Content-Type", "text/plain", 0, 0));
-    evhtp_send_reply(req, EVHTP_RES_OK);
+    send_reply(req,"txt");
 }
 
 /**
@@ -163,10 +171,7 @@ void dump_request_cb(evhtp_request_t *req, void *arg)
 void echo_cb(evhtp_request_t *req, void *arg)
 {
     evbuffer_add_printf(req->buffer_out, "<html><body><h1>zimg works!</h1></body></html>");
-    //evhtp_headers_add_header(req->headers_out, evhtp_header_new("Server", "zimg/1.0.0 (Unix) (OpenSUSE/Linux)", 0, 0));
-    evhtp_headers_add_header(req->headers_out, evhtp_header_new("Server", server_name, 0, 0));
-    evhtp_headers_add_header(req->headers_out, evhtp_header_new("Content-Type", "text/html", 0, 0));
-    evhtp_send_reply(req, EVHTP_RES_OK);
+    send_reply(req,"html");
 }
 
 
@@ -367,13 +372,17 @@ Content-Type: image/png
 	goto err;
     }
 
+    LOG_PRINT(LOG_INFO, "============post_request_cb() OK!===============");
     evbuffer_add_printf(req->buffer_out, "{\"status\":0,\"picture\":%s}",md5sum);
-    evhtp_headers_add_header(req->headers_out, evhtp_header_new("Server", server_name, 0, 0));
-    evhtp_headers_add_header(req->headers_out, evhtp_header_new("Content-Type", "application/json", 0, 0));
-    evhtp_send_reply(req, EVHTP_RES_OK);
-    return;
+    goto done;
 
 err:
+    LOG_PRINT(LOG_INFO, "============post_request_cb() ERROR!===============");
+    evbuffer_add_printf(req->buffer_out, "{\"status\":-1}"); 
+
+done:
+    send_reply(req,"json");
+
     //clean up
     if(fileName != NULL)
     {
@@ -390,11 +399,6 @@ err:
 	free(buff);
     }
 
-    LOG_PRINT(LOG_INFO, "============post_request_cb() ERROR!===============");
-    evbuffer_add_printf(req->buffer_out, "{\"status\":-1}"); 
-    evhtp_headers_add_header(req->headers_out, evhtp_header_new("Server", server_name, 0, 0));
-    evhtp_headers_add_header(req->headers_out, evhtp_header_new("Content-Type", "application/json", 0, 0));
-    evhtp_send_reply(req, EVHTP_RES_200);
 }
 
 
@@ -424,8 +428,7 @@ void send_document_cb(evhtp_request_t *req, void *arg)
     }
 
 
-    const char *uri;
-    uri = req->uri->path->full;
+    const char *uri = req->uri->path->full;
     const char *rfull = req->uri->path->full;
     const char *rpath = req->uri->path->path;
     const char *rfile= req->uri->path->file;
@@ -457,11 +460,7 @@ void send_document_cb(evhtp_request_t *req, void *arg)
 		evbuffer_add_file(req->buffer_out, fd, 0, st.st_size);
 	    }
 	}
-	evbuffer_add_printf(req->buffer_out, "<html>\n </html>\n");
-	//evhtp_headers_add_header(req->headers_out, evhtp_header_new("Server", "zimg/1.0.0 (Unix) (OpenSUSE/Linux)", 0, 0));
-	evhtp_headers_add_header(req->headers_out, evhtp_header_new("Server", server_name, 0, 0));
-	evhtp_headers_add_header(req->headers_out, evhtp_header_new("Content-Type", "text/html", 0, 0));
-	evhtp_send_reply(req, EVHTP_RES_OK);
+	send_reply(req,"html");
 	LOG_PRINT(LOG_INFO, "============send_document_cb() DONE!===============");
 	goto done;
     }
@@ -469,10 +468,7 @@ void send_document_cb(evhtp_request_t *req, void *arg)
     if(strstr(uri, "favicon.ico"))
     {
 	LOG_PRINT(LOG_INFO, "favicon.ico Request, Denied.");
-	//evhtp_headers_add_header(req->headers_out, evhtp_header_new("Server", "zimg/1.0.0 (Unix) (OpenSUSE/Linux)", 0, 0));
-	evhtp_headers_add_header(req->headers_out, evhtp_header_new("Server", server_name, 0, 0));
-	evhtp_headers_add_header(req->headers_out, evhtp_header_new("Content-Type", "text/html", 0, 0));
-	evhtp_send_reply(req, EVHTP_RES_OK);
+	send_reply(req,"html");
 	goto done;
     }
     LOG_PRINT(LOG_INFO, "Got a GET request for <%s>",  uri);
@@ -500,14 +496,13 @@ void send_document_cb(evhtp_request_t *req, void *arg)
     int width, height, proportion, gray;
     evhtp_kvs_t *params;
     params = req->uri->query;
-    if(!params)
-    {
-	width = 0;
-	height = 0;
-	proportion = 1;
-	gray = 0;
-    }
-    else
+
+    width = 0;
+    height = 0;
+    proportion = 1;
+    gray = 0;
+
+    if(params != NULL)
     {
 	const char *str_w, *str_h;
 	str_w = evhtp_kv_find(params, "w");
@@ -528,10 +523,7 @@ void send_document_cb(evhtp_request_t *req, void *arg)
 		    "Since 2008-12-22, there left no room in my heart for another one.</br>\n"
 		    "</body>\n</html>\n"
 		    );
-	    //evhtp_headers_add_header(req->headers_out, evhtp_header_new("Server", "zimg/1.0.0 (Unix) (OpenSUSE/Linux)", 0, 0));
-	    evhtp_headers_add_header(req->headers_out, evhtp_header_new("Server", server_name, 0, 0));
-	    evhtp_headers_add_header(req->headers_out, evhtp_header_new("Content-Type", "text/html", 0, 0));
-	    evhtp_send_reply(req, EVHTP_RES_OK);
+	    send_reply(req,"html");
 	    LOG_PRINT(LOG_INFO, "============send_document_cb() DONE!===============");
 	    goto done;
 	}
@@ -561,7 +553,6 @@ void send_document_cb(evhtp_request_t *req, void *arg)
 
     int get_img_rst = get_img(zimg_req, &buff,  &len);
 
-
     if(get_img_rst == -1)
     {
 	LOG_PRINT(LOG_ERROR, "zimg Requset Get Image[MD5: %s] Failed!", zimg_req->md5);
@@ -572,12 +563,8 @@ void send_document_cb(evhtp_request_t *req, void *arg)
     evbuffer_add(req->buffer_out, buff, len);
 
     LOG_PRINT(LOG_INFO, "Got the File!");
-    //evhtp_headers_add_header(req->headers_out, evhtp_header_new("Server", "zimg/1.0.0 (Unix) (OpenSUSE/Linux)", 0, 0));
-    evhtp_headers_add_header(req->headers_out, evhtp_header_new("Server", server_name, 0, 0));
-    evhtp_headers_add_header(req->headers_out, evhtp_header_new("Content-Type", "image/jpeg", 0, 0));
-    evhtp_send_reply(req, EVHTP_RES_OK);
+    send_reply(req,"jpg");
     LOG_PRINT(LOG_INFO, "============send_document_cb() DONE!===============");
-
 
     if(get_img_rst == 2)
     {
@@ -590,10 +577,7 @@ void send_document_cb(evhtp_request_t *req, void *arg)
 
 err:
     evbuffer_add_printf(req->buffer_out, "<html><body><h1>404 Not Found!</h1></body></html>");
-    //evhtp_headers_add_header(req->headers_out, evhtp_header_new("Server", "zimg/1.0.0 (Unix) (OpenSUSE/Linux)", 0, 0));
-    evhtp_headers_add_header(req->headers_out, evhtp_header_new("Server", server_name, 0, 0));
-    evhtp_headers_add_header(req->headers_out, evhtp_header_new("Content-Type", "text/html", 0, 0));
-    evhtp_send_reply(req, EVHTP_RES_NOTFOUND);
+    send_reply(req,"html");
     LOG_PRINT(LOG_INFO, "============send_document_cb() ERROR!===============");
 
 done:
