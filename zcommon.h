@@ -36,6 +36,9 @@
 /* Number of worker threads.  Should match number of CPU cores reported in /proc/cpuinfo. */
 #define NUM_THREADS 4
 
+#define ZIMG_OK 0
+#define ZIMG_ERR -1
+
 struct setting{
     int daemon;
     char root_path[512];

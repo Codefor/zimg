@@ -25,6 +25,8 @@
 
 #include "zcommon.h"
 
+#define MagickString(magic)  (const char *) (magic), sizeof(magic)-1
+
 typedef struct zimg_req_s {
     char *md5;
     int width;
@@ -34,7 +36,22 @@ typedef struct zimg_req_s {
 	char *rsp_path;
 } zimg_req_t;
 
-int save_img(const char *buff, const int len, char *md5);
+struct MagicInfo{  
+    const char *name;
+    int offset;
+    const char *magic;
+    int length;
+};
+
+static const struct MagicInfo magicInfoTable[] = 
+{
+    { "PNG", 0, MagickString("\211PNG\r\n\032\n") },
+    { "GIF", 0, MagickString("GIF8") },
+    { "JPEG", 0, MagickString("\377\330\377") }
+};
+
+
+int save_img(const char *buff, const int len, char *md5sum);
 int new_img(const char *buff, const size_t len, const char *save_name);
 int get_img(zimg_req_t *req, char **buff_ptr, size_t *img_size);
 

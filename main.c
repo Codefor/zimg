@@ -186,7 +186,7 @@ int main(int argc, char **argv)
     if(settings.log)
     {
         const char *log_path = "./log";
-        if(is_dir(log_path) != 1)
+        if(is_dir(log_path) != ZIMG_OK)
         {
             if(mk_dir(log_path) != 1)
             {
@@ -197,7 +197,7 @@ int main(int argc, char **argv)
         log_init();
     }
 
-    if(is_dir(settings.img_path) != 1)
+    if(is_dir(settings.img_path) != ZIMG_OK)
     {
         if(mk_dir(settings.img_path) != 1)
         {
@@ -249,6 +249,7 @@ int main(int argc, char **argv)
 
     evhtp_set_cb(htp, "/dump", dump_request_cb, NULL);
     evhtp_set_cb(htp, "/upload", post_request_cb, NULL);
+    evhtp_set_cb(htp, "/phone", phone_request_cb, NULL);
     //evhtp_set_gencb(htp, echo_cb, NULL);
     //if no other callbacks are matched
     evhtp_set_gencb(htp, send_document_cb, NULL);

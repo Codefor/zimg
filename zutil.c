@@ -23,6 +23,7 @@
 #include <ctype.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <dirent.h>
 #include <unistd.h>
 #include "zutil.h"
 #include "zlog.h"
@@ -31,13 +32,7 @@
 pid_t gettid();
 int get_cpu_cores();
 static void kmp_init(const char *pattern, int pattern_size);
-int kmp(const char *matcher, int mlen, const char *pattern, int plen);
 int get_type(const char *filename, char *type);
-int is_img(const char *filename);
-int is_dir(const char *path);
-int mk_dir(const char *path);
-int mk_dirs(const char *dir);
-int is_md5(char *s);
 static int htoi(char s[]);
 int str_hash(const char *str);
 
@@ -190,21 +185,30 @@ int is_img(const char *filename)
  *
  * @return 1 for yes and -1 for no.
  */
-int is_dir(const char *path)
-{
+int is_dir(const char *path){
     struct stat st;
-    if(stat(path, &st)<0)
-    {
+    if(stat(path, &st) < 0){
         LOG_PRINT(LOG_WARNING, "Path[%s] is Not Existed!", path);
-        return -1;
+        return ZIMG_ERR;
     }
-    if(S_ISDIR(st.st_mode))
-    {
+
+    if(S_ISDIR(st.st_mode)){
         LOG_PRINT(LOG_INFO, "Path[%s] is A Dir.", path);
-        return 1;
+        return ZIMG_OK;
+    }else{
+        return ZIMG_ERR;
     }
-    else
-        return -1;
+}
+
+int is_file(const char *path){
+    struct stat st;
+
+    if(lstat(path, &st) ==0){
+        if(S_ISREG(st.st_mode)){
+	    return ZIMG_OK;
+	}
+    }
+    return ZIMG_ERR;
 }
 
 /**
@@ -212,7 +216,7 @@ int is_dir(const char *path)
  *
  * @param path The path you want to create.
  *
- * @return  1 for success and -1 for fail.
+ * @return  ZIMG_OK for success and ZIMG_ERR for fail.
  */
 int mk_dir(const char *path)
 {
@@ -242,17 +246,17 @@ int mk_dir(const char *path)
  *
  * @return  1 for success and -1 for fail.
  */
-int mk_dirs(const char *dir)
-{
-    char tmp[512];
-    char *p;
-    if (strlen(dir) == 0 || dir == NULL) 
-    {
+int mk_dirs(const char *dir){
+    if (dir == NULL || strlen(dir) == 0) {
         LOG_PRINT(LOG_WARNING, "strlen(dir) is 0 or dir is NULL.");
-        return -1;
+        return ZIMG_ERR;
     }
+
+    char tmp[512];
+    char *p = NULL;
     memset(tmp, 0, sizeof(tmp));
     strncpy(tmp, dir, strlen(dir));
+
     if (tmp[0] == '/' && tmp[1]== '/') 
         p = strchr(tmp + 2, '/'); 
     else 
@@ -267,10 +271,10 @@ int mk_dirs(const char *dir)
     {
         mkdir(tmp,0777);
         chdir(tmp);
-        return 1;
+        return ZIMG_OK;
     }
     mk_dirs(p + 1);
-    return 1;
+    return ZIMG_OK;
 }
 
 /**

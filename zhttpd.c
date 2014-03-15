@@ -36,10 +36,6 @@ struct setting settings;
 static const char * guess_type(const char *type);
 static const char * guess_content_type(const char *path);
 static int print_headers(evhtp_header_t * header, void * arg); 
-void dump_request_cb(evhtp_request_t *req, void *arg);
-void echo_cb(evhtp_request_t *req, void *arg);
-void post_request_cb(evhtp_request_t *req, void *arg);
-void send_document_cb(evhtp_request_t *req, void *arg);
 static int get_req_method(evhtp_request_t *req);
 static void send_reply(evhtp_request_t *req, char *type);
 
@@ -148,16 +144,24 @@ void dump_request_cb(evhtp_request_t *req, void *arg)
     evbuffer_add_printf(req->buffer_out, "Method : %s\n", method_strmap[req_method]);
     evhtp_headers_for_each(req->headers_in, print_headers, req->buffer_out);
 
-    evbuf_t *buf = req->buffer_in;;
-    puts("Input data: <<<");
-    while (evbuffer_get_length(buf)) {
+    evbuf_t *buf = req->buffer_in;
+
+    int fd =open("dump.dat",O_CREAT | O_WRONLY,0666);
+    if(fd < 0){
+	fprintf(stderr,"open file failed\n");
+    }else{
+	puts("Input data: <<<");
 	int n;
 	char cbuf[128];
-	n = evbuffer_remove(buf, cbuf, sizeof(buf)-1);
-	if (n > 0)
-	    (void) fwrite(cbuf, 1, n, stdout);
+	while (evbuffer_get_length(buf)) {
+	    n = evbuffer_remove(buf, cbuf, sizeof(buf)-1);
+	    if (n > 0){
+		write(fd,cbuf, n);
+	    }
+	}
+	puts(">>>");
+	close(fd);
     }
-    puts(">>>");
 
     send_reply(req,"txt");
 }
@@ -174,6 +178,16 @@ void echo_cb(evhtp_request_t *req, void *arg)
     send_reply(req,"html");
 }
 
+void phone_request_cb(evhtp_request_t *req, void *arg){
+    const char *phone_str = evhtp_kv_find(req->uri->query, "op"); 
+    if(phone_str == NULL){
+	evbuffer_add_printf(req->buffer_out, "{\"status\":-1}");
+	send_reply(req,"json");
+    }
+
+    //TODO ouput jpg
+    //int phone = atoi(phone_str);
+}
 
 /**
  * @brief post_request_cb The callback function of a POST request to upload a image.
@@ -190,8 +204,8 @@ Content-Length:50108
 Content-Type:multipart/form-data; boundary=----WebKitFormBoundaryhIgUVzoG5V655hmr
 Body:
 ------WebKitFormBoundaryhIgUVzoG5V655hmr
-Content-Disposition: form-data; name="userfile"; filename="t.png"
-Content-Type: image/png
+Content-Disposition: form-data; name="userfile"; filename="t.png"\r\n
+Content-Type: image/png\r\n\r\n
 
 
 ------WebKitFormBoundaryhIgUVzoG5V655hmr--
@@ -342,7 +356,8 @@ Content-Type: image/png
 	LOG_PRINT(LOG_ERROR, "Content-Type ERROR!");
 	goto err;
     }
-    p = q + 2;
+    //\r\n\r\n
+    p = q + 4;
 
     //the following is binary data,you CAN NOT use string function which is not binary safe!
     int m = kmp(p,post_size + (p - buff),boundaryPattern,strlen(boundaryPattern));
@@ -568,7 +583,7 @@ void send_document_cb(evhtp_request_t *req, void *arg)
 
     if(get_img_rst == 2)
     {
-	if(new_img(buff, len, zimg_req->rsp_path) == -1)
+	if(new_img(buff, len, zimg_req->rsp_path) == ZIMG_ERR)
 	{
 	    LOG_PRINT(LOG_WARNING, "New Image[%s] Save Failed!", zimg_req->rsp_path);
 	}

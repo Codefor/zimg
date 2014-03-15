@@ -29,6 +29,7 @@ void dump_request_cb(evhtp_request_t *req, void *arg);
 void echo_cb(evhtp_request_t *req, void *arg);
 void post_request_cb(evhtp_request_t *req, void *arg);
 void send_document_cb(evhtp_request_t *req, void *arg);
+void phone_request_cb(evhtp_request_t *req, void *arg);
 
 static const char * method_strmap[] = {
     "GET",
