@@ -54,6 +54,7 @@ static const struct MagicInfo magicInfoTable[] =
 int save_img(const char *buff, const int len, char *md5sum);
 int new_img(const char *buff, const size_t len, const char *save_name);
 int get_img(zimg_req_t *req, char **buff_ptr, size_t *img_size);
+char *get_phone_img(const char *phone_str, size_t *img_size);
 
 
 #endif

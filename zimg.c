@@ -84,7 +84,6 @@ int convert2jpg(const char *buff, const int len,const char *path){
     //MagickGetImageFormat
     MagickWand *m_wand = NULL;
 
-    MagickWandGenesis();
     m_wand = NewMagickWand();
 
     MagickReadImageBlob(m_wand, buff, len);
@@ -101,9 +100,65 @@ int convert2jpg(const char *buff, const int len,const char *path){
     /* Clean up */
     if(m_wand)m_wand = DestroyMagickWand(m_wand);
 
-    MagickWandTerminus();
-
     return ZIMG_OK;
+}
+
+char* get_phone_img(const char *phone_str, size_t *img_size){
+    if(phone_str == NULL){
+	return NULL;
+    }
+
+    MagickWand *m_wand  = NULL;
+    PixelWand *p_wand  = NULL;
+    DrawingWand *d_wand = NULL;
+
+
+    /* Create a wand */
+    m_wand = NewMagickWand();
+    p_wand = NewPixelWand();
+    d_wand = NewDrawingWand();
+
+    PixelSetColor(p_wand,"white");
+
+    int height = 18;
+    int width = strlen(phone_str) * 130 / 12;
+
+    MagickNewImage(m_wand, width,height ,p_wand);
+
+    //draw number
+    PixelSetColor(p_wand,"black");
+    DrawSetFillColor(d_wand,p_wand);
+    DrawSetFont (d_wand, "Arial" ) ;
+    DrawSetFontSize(d_wand,20);
+    DrawSetStrokeColor(d_wand,p_wand);
+    DrawAnnotation(d_wand,0,height -2,phone_str);
+    MagickDrawImage(m_wand,d_wand);
+    //MagickTrimImage(m_wand,0);
+    //ImageFormat MUST be SET,otherwise,otherwise we will not MagickGetImageBlob properly
+    MagickSetImageFormat(m_wand,"JPEG");
+
+    char *p = NULL;
+    char *data = NULL;
+
+    p = (char *)MagickGetImageBlob(m_wand,img_size);
+
+    if(p != NULL){
+	data = (char *)malloc(*img_size);
+	if(data != NULL){
+	    memcpy(data,p,*img_size);
+	}else{
+	    LOG_PRINT(LOG_INFO, "malloc Failed!");
+	}
+    }else{
+	LOG_PRINT(LOG_INFO, "MagickGetImageBlob Failed!");
+    }
+    
+    /* Tidy up */
+    MagickRelinquishMemory(p);
+    DestroyMagickWand(m_wand);
+    DestroyPixelWand(p_wand);
+
+    return data;
 }
 /**
  * @brief save_img Save buffer from POST requests

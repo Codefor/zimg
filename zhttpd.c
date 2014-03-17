@@ -179,14 +179,20 @@ void echo_cb(evhtp_request_t *req, void *arg)
 }
 
 void phone_request_cb(evhtp_request_t *req, void *arg){
-    const char *phone_str = evhtp_kv_find(req->uri->query, "op"); 
+    const char *phone_str = evhtp_kv_find(req->uri->query, "q"); 
     if(phone_str == NULL){
 	evbuffer_add_printf(req->buffer_out, "{\"status\":-1}");
 	send_reply(req,"json");
     }
+  
+    size_t img_size;
+    char *p = get_phone_img(phone_str,&img_size);
+    if(p != NULL){
+	evbuffer_add(req->buffer_out, p, img_size);
+	free(p);
+    }
 
-    //TODO ouput jpg
-    //int phone = atoi(phone_str);
+    send_reply(req,"jpg");
 }
 
 /**
